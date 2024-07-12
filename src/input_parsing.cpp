@@ -37,12 +37,16 @@ void parse_args(Args &args, int argc, char **argv)
         }
         else // Regular argument
         {
-            args_vector.push_back(argv[i]);
+            args_vector.push_back(std::string(argv[i]));
         }
     }
 
     args.count = args_vector.size();
-    args.args = args_vector.data();
+    args.args = new std::string[args.count];
+    for (word_index_t i = 0; i < args.count; i++)
+    {
+        args.args[i] = args_vector[i];
+    }
 
     return;
 }

@@ -1,8 +1,9 @@
 #include "symbol.hpp"
 
+#include <iostream>
 #include <bitset>
 
-bool check_is_valid_solution(const hash_value_t *value, const word_index_t word_count)
+bool check_is_valid_solution(const std::vector<hash_value_t> value, const word_index_t word_count)
 {
     std::bitset<266> unique;
     for (word_index_t i = 0; i < word_count; i++)
@@ -13,22 +14,46 @@ bool check_is_valid_solution(const hash_value_t *value, const word_index_t word_
         }
         unique[value[i]] = true;
     }
+    std::cout << "Valid Solution:";
+    for (word_index_t i = 0; i < word_count; i++)
+    {
+        std::cout << " " << std::to_string(value[i]);
+    }
+    std::cout << std::endl;
     return true;
 }
 
-Symbol::Symbol(const std::string symbol, hash_value_t *value, const word_index_t word_count) :
+Symbol::Symbol() :
+    symbol("X"),
+    value(),
+    valid_solution(false)
+{
+}
+
+Symbol::Symbol(const std::string symbol, std::vector<hash_value_t> value, const word_index_t word_count) : symbol(symbol),
+                                                                                               value(value),
+                                                                                               valid_solution(check_is_valid_solution(value, word_count))
+{}
+
+Symbol::Symbol(const std::string symbol, std::vector<hash_value_t> value, const word_index_t word_count, const bool valid_solution) :
     symbol(symbol),
     value(value),
-    valid_solution(check_is_valid_solution(value, word_count))
-{}
-
-Symbol::Symbol(const Symbol &other) :
-    symbol(other.symbol),
-    value(other.value),
-    valid_solution(other.valid_solution)
-{}
-
-Symbol::~Symbol() { delete[] value; }
+    valid_solution(valid_solution)
+{
+    if (valid_solution)
+    {
+        std::cout << "Valid Solution: " << symbol << " has hash table:";
+    }
+    else
+    {
+        return;
+    }
+    for (word_index_t i = 0; i < word_count; i++)
+    {
+        std::cout << " " << std::to_string(value[i]);
+    }
+    std::cout << std::endl;
+}
 
 
 std::string Symbol::get_symbol() const { return this->symbol; }

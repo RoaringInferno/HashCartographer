@@ -3,6 +3,7 @@
 #include "operation.hpp"
 
 #include <bitset>
+#include <iostream>
 
 /**
  * The sizes of the layers of the hash tree are as follows:
@@ -13,24 +14,34 @@
  * Every layer has a size of <previous> choose 2 * OPERATION_COUNT
  */
 
-HashFunctionTreeLayer::HashFunctionTreeLayer(const hash_index_t size) : size(size), symbol((Symbol*)(malloc(sizeof(Symbol) * size))) {}
+HashFunctionTreeLayer::HashFunctionTreeLayer() :
+    size(0),
+    symbol(),
+    opchunk_size(0)
+{
+}
 
-HashFunctionTreeLayer::HashFunctionTreeLayer(const HashFunctionTreeLayer &other) : size(other.size) {}
+HashFunctionTreeLayer::HashFunctionTreeLayer(const hash_index_t size) : size(size),
+                                                                        symbol(size),
+                                                                        opchunk_size(size / OPERATION_COUNT)
+{}
 
-HashFunctionTreeLayer::~HashFunctionTreeLayer() { delete[] symbol; }
-
+void HashFunctionTreeLayer::set_symbol(const Operation operation, const hash_index_t index, const Symbol &symbol)
+{
+    this->symbol[opchunk_size * static_cast<hash_index_t>(operation) + index] = symbol;
+}
 
   // HashFunctionTree
 
-hash_index_t next_depth(const hash_index_t current_depth)
+inline hash_index_t next_depth_size(const hash_index_t previous_depth_size)
 {
-    hash_index_t permutation = (current_depth * (current_depth-1)) / 2;
-    return permutation * OPERATION_COUNT;
+    hash_index_t permutation = (previous_depth_size * (previous_depth_size-1)) / 2;
+    return (permutation + previous_depth_size * 256) * OPERATION_COUNT;
 }
 
 HashFunctionTree::HashFunctionTree(const std::string *words, const word_index_t word_count, const operation_index_t depth) :
-    hash_tree_depth((HashFunctionTreeLayer*)(malloc(sizeof(HashFunctionTreeLayer) * depth))),
     total_depth(depth),
+    hash_tree_depth(depth + 1),
     word_count(word_count),
     character_count(0),
     character_hash_table(nullptr)
@@ -67,11 +78,11 @@ HashFunctionTree::HashFunctionTree(const std::string *words, const word_index_t 
     }
 
     // Allocate memory
-    hash_index_t current_depth_size = character_count + 256;
-    for (operation_index_t current_depth = 0; current_depth < depth; current_depth++) // Set up the layers of the hash tree (allocate memory)
+    hash_index_t current_depth_size = character_count;
+    for (operation_index_t current_depth = 0; current_depth <= depth; current_depth++) // Set up the layers of the hash tree (allocate memory)
     {
-        hash_tree_depth[current_depth] = HashFunctionTreeLayer(current_depth_size);
-        if (current_depth < depth) current_depth_size = next_depth(current_depth_size);
+        hash_tree_depth[current_depth] = *new HashFunctionTreeLayer(current_depth_size);
+        if (current_depth < depth) current_depth_size = next_depth_size(current_depth_size);
     }
 
     // Set up the character hash table to translate character indexes into their position in the original word
@@ -91,67 +102,80 @@ HashFunctionTree::HashFunctionTree(const std::string *words, const word_index_t 
     // Set character symbols
     for (character_index_t first_layer_initialization_index = 0; first_layer_initialization_index < character_count; first_layer_initialization_index++) // For each character
     {
-        hash_value_t* symbol_value = new hash_value_t[word_count]; // Allocate memory for the character hash
+        std::vector<hash_value_t> symbol_value(word_count); // Allocate memory for the character hash
         for (word_index_t j = 0; j < word_count; j++) // For each word
         {
             symbol_value[j] = words[j][character_hash_table[first_layer_initialization_index]]; // Set the character hash
         }
         hash_tree_depth[0].symbol[first_layer_initialization_index] = Symbol(
-            "word[" + std::to_string(character_hash_table[first_layer_initialization_index]) + "]",
-            symbol_value,
-            word_count
-        );
-    }
-
-    // Set constant symbols
-    for (character_index_t constant_index; constant_index < 256; constant_index++)
-    {
-        hash_value_t* symbol_value = new hash_value_t[word_count]; // Allocate memory for the character hash
-        for (word_index_t j = 0; j < word_count; j++) // For each word
-        {
-            symbol_value[j] = constant_index; // Set the character hash
-        }
-        hash_tree_depth[0].symbol[character_count + constant_index] = Symbol(
-            std::to_string(constant_index),
+            "[" + std::to_string(character_hash_table[first_layer_initialization_index]) + "]",
             symbol_value,
             word_count
         );
     }
 }
 
-HashFunctionTree::~HashFunctionTree() { delete[] hash_tree_depth; }
 
-void HashFunctionTree::evaluate(const Operation operation, const operation_index_t depth_to_search, Symbol *write_to) const
+
+void HashFunctionTree::evaluate(const Operation operation, const operation_index_t depth_to_search) // const
 {
     hash_index_t write_to_index = 0;
+
     // For every combination of 2 symbols in the depth to search
-    for (character_index_t rhs = 0; rhs < hash_tree_depth[depth_to_search].size; rhs++) // For each symbol
+    for (hash_index_t lhs = 0; lhs < hash_tree_depth[depth_to_search].size; lhs++) // For each symbol
     {
-        for (character_index_t lhs = rhs+1; lhs < hash_tree_depth[depth_to_search].size; lhs++) // For each symbol after the current one
+        for (hash_index_t rhs = lhs+1; rhs < hash_tree_depth[depth_to_search].size; rhs++) // For each symbol after the current one
         {
             // Generate a Symbol
-            hash_value_t* symbol_value = new hash_value_t[word_count]; // Allocate memory for the symbol value array
-            for (word_index_t i = 0; i < word_count; i++) // For each word
+            std::vector<hash_value_t> symbol_value = std::vector<hash_value_t>(this->word_count); // Allocate memory for the symbol value array
+            std::bitset<256> unique; // The unique characters
+            for (word_index_t i = 0; i < this->word_count; i++) // For each word
             {
                 symbol_value[i] = execute(
                     operation,
-                    hash_tree_depth[depth_to_search].symbol[lhs].get_value(i),
-                    hash_tree_depth[depth_to_search].symbol[rhs].get_value(i)
+                    this->hash_tree_depth[depth_to_search].symbol[lhs].get_value(i),
+                    this->hash_tree_depth[depth_to_search].symbol[rhs].get_value(i)
                 ); // Set the symbol value
+                unique.set(symbol_value[i]); // Set the unique character
             }
-            write_to[write_to_index] = Symbol(
-                "(" + hash_tree_depth[depth_to_search].symbol[lhs].get_symbol() + " " + get_operation_char(operation) + " " + hash_tree_depth[depth_to_search].symbol[rhs].get_symbol() + ")",
+            Symbol symbol_to_write = Symbol(
+                "(" + this->hash_tree_depth[depth_to_search].symbol[lhs].get_symbol() + " " + get_operation_char(operation) + " " + this->hash_tree_depth[depth_to_search].symbol[rhs].get_symbol() + ")",
                 symbol_value,
-                word_count
+                this->word_count,
+                unique.count() == this->word_count
             ); // Write the symbol to the write_to array
+            this->hash_tree_depth[depth_to_search+1].set_symbol(operation, write_to_index, symbol_to_write);
+            write_to_index++; // Increment the write_to index
+        }
+        for (uint16_t rhs = 0; rhs < 256; rhs++) // For each character
+        {
+            // Generate a Symbol
+            std::vector<hash_value_t> symbol_value = std::vector<hash_value_t>(this->word_count); // Allocate memory for the symbol value array
+            std::bitset<256> unique; // The unique characters
+            for (word_index_t i = 0; i < this->word_count; i++) // For each word
+            {
+                symbol_value[i] = execute(
+                    operation,
+                    this->hash_tree_depth[depth_to_search].symbol[lhs].get_value(i),
+                    rhs
+                ); // Set the symbol value
+                unique.set(symbol_value[i]); // Set the unique character
+            }
+            Symbol symbol_to_write = Symbol(
+                "(" + this->hash_tree_depth[depth_to_search].symbol[lhs].get_symbol() + " " + get_operation_char(operation) + " " + std::to_string(rhs) + ")",
+                symbol_value,
+                this->word_count,
+                unique.count() == this->word_count
+            ); // Write the symbol to the write_to array
+            this->hash_tree_depth[depth_to_search+1].set_symbol(operation, write_to_index, symbol_to_write);
             write_to_index++; // Increment the write_to index
         }
     }
 }
 
-HashFunctionTreeLayer *HashFunctionTree::get_layers()
+hash_index_t HashFunctionTree::get_opchunk_size(const operation_index_t layer_index) const
 {
-    return this->hash_tree_depth;
+    return this->hash_tree_depth[layer_index].opchunk_size;
 }
 
 void HashFunctionTree::export_solutions(std::vector<std::vector<Symbol>> &solutions) const

@@ -8,12 +8,12 @@ class Symbol
 {
 private:
     std::string symbol;
-    hash_value_t* value;
+    std::vector<hash_value_t> value;
     bool valid_solution;
 public:
-    Symbol() = delete;
-    Symbol(const std::string symbol, hash_value_t* value, const word_index_t word_count);
-    ~Symbol();
+    Symbol();
+    Symbol(const std::string symbol, std::vector<hash_value_t> value, const word_index_t word_count);
+    Symbol(const std::string symbol, std::vector<hash_value_t> value, const word_index_t word_count, const bool valid_solution);
 
     std::string get_symbol() const;
     bool is_valid_solution() const;
