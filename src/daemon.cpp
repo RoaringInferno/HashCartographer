@@ -298,3 +298,18 @@ Symbol HashFunctionTree::get_tightest() const
     }
     return this->hash_tree_depth[min_tightness_depth].symbol[min_tightness_index];
 }
+
+operation_index_t HashFunctionTree::get_total_depth() const
+{
+    return this->total_depth;
+}
+
+word_index_t HashFunctionTree::get_word_count() const
+{
+    return this->word_count;
+}
+
+character_index_t HashFunctionTree::get_character_count() const
+{
+    return this->character_count;
+}

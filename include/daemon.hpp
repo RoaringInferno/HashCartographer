@@ -38,4 +38,8 @@ public:
 
     Symbol get_fastest() const;
     Symbol get_tightest() const;
+
+    operation_index_t get_total_depth() const;
+    word_index_t get_word_count() const;
+    character_index_t get_character_count() const;
 };
