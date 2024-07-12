@@ -14,45 +14,53 @@ bool check_is_valid_solution(const std::vector<hash_value_t> value, const word_i
         }
         unique[value[i]] = true;
     }
-    std::cout << "Valid Solution:";
-    for (word_index_t i = 0; i < word_count; i++)
-    {
-        std::cout << " " << std::to_string(value[i]);
-    }
-    std::cout << std::endl;
     return true;
 }
 
 Symbol::Symbol() :
     symbol("X"),
     value(),
-    valid_solution(false)
-{
-}
-
-Symbol::Symbol(const std::string symbol, std::vector<hash_value_t> value, const word_index_t word_count) : symbol(symbol),
-                                                                                               value(value),
-                                                                                               valid_solution(check_is_valid_solution(value, word_count))
+    valid_solution(false),
+    opcount(0)
 {}
 
-Symbol::Symbol(const std::string symbol, std::vector<hash_value_t> value, const word_index_t word_count, const bool valid_solution) :
-    symbol(symbol),
-    value(value),
-    valid_solution(valid_solution)
+hash_value_t calc_tightness(const std::vector<hash_value_t> value, const word_index_t word_count)
 {
-    if (valid_solution)
-    {
-        std::cout << "Valid Solution: " << symbol << " has hash table:";
-    }
-    else
-    {
-        return;
-    }
+    hash_value_t max, min;
     for (word_index_t i = 0; i < word_count; i++)
     {
-        std::cout << " " << std::to_string(value[i]);
+        if (i == 0)
+        {
+            max = value[i];
+            min = value[i];
+        }
+        else
+        {
+            if (value[i] > max)
+            {
+                max = value[i];
+            }
+            if (value[i] < min)
+            {
+                min = value[i];
+            }
+        }
     }
-    std::cout << std::endl;
+    return max - min;
+}
+
+Symbol::Symbol(const std::string symbol, std::vector<hash_value_t> value, const word_index_t word_count, const bool valid_solution, const operation_index_t opcount) :
+    symbol(symbol),
+    value(value),
+    valid_solution(valid_solution),
+    opcount(opcount)
+{
+    /*
+    if (valid_solution)
+    {
+        std::cout << "Valid Solution: " << this->to_string() << std::endl;
+    }
+    */
 }
 
 
@@ -61,3 +69,15 @@ std::string Symbol::get_symbol() const { return this->symbol; }
 bool Symbol::is_valid_solution() const { return this->valid_solution; }
 
 hash_value_t Symbol::get_value(const character_index_t index) const { return this->value[index]; }
+
+operation_index_t Symbol::get_opcount() const { return this->opcount; }
+
+std::string Symbol::to_string() const
+{
+    std::string str = this->symbol + " with opcount " + std::to_string(this->opcount) + " has hash table:";
+    for (hash_value_t val : this->value)
+    {
+        str += " " + std::to_string(val);
+    }
+    return str;
+}

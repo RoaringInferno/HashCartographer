@@ -22,4 +22,7 @@ int main(int argc, char** argv) {
             tree.evaluate(operation, depth_to_search); // Evaluate the operation
         }
     }
+
+    Symbol fastest = tree.get_fastest();
+    std::cout << "Fastest: " << fastest.to_string() << "\n";
 }

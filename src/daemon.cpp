@@ -100,17 +100,21 @@ HashFunctionTree::HashFunctionTree(const std::string *words, const word_index_t 
 
     // Set up the first layer of the hash tree
     // Set character symbols
-    for (character_index_t first_layer_initialization_index = 0; first_layer_initialization_index < character_count; first_layer_initialization_index++) // For each character
+    for (character_index_t characher_index = 0; characher_index < character_count; characher_index++) // For each character
     {
         std::vector<hash_value_t> symbol_value(word_count); // Allocate memory for the character hash
+        std::bitset<256> unique; // The unique characters
         for (word_index_t j = 0; j < word_count; j++) // For each word
         {
-            symbol_value[j] = words[j][character_hash_table[first_layer_initialization_index]]; // Set the character hash
+            symbol_value[j] = words[j][character_hash_table[characher_index]]; // Set the character hash
+            unique.set(symbol_value[j]); // Set the unique character
         }
-        hash_tree_depth[0].symbol[first_layer_initialization_index] = Symbol(
-            "[" + std::to_string(character_hash_table[first_layer_initialization_index]) + "]",
+        hash_tree_depth[0].symbol[characher_index] = Symbol(
+            "[" + std::to_string(character_hash_table[characher_index]) + "]",
             symbol_value,
-            word_count
+            word_count,
+            unique.count() == word_count,
+            setting::character_read_opcount_cost
         );
     }
 }
@@ -142,7 +146,8 @@ void HashFunctionTree::evaluate(const Operation operation, const operation_index
                 "(" + this->hash_tree_depth[depth_to_search].symbol[lhs].get_symbol() + " " + get_operation_char(operation) + " " + this->hash_tree_depth[depth_to_search].symbol[rhs].get_symbol() + ")",
                 symbol_value,
                 this->word_count,
-                unique.count() == this->word_count
+                unique.count() == this->word_count,
+                this->hash_tree_depth[depth_to_search].symbol[lhs].get_opcount() + this->hash_tree_depth[depth_to_search].symbol[rhs].get_opcount() + setting::operation_opcount_cost
             ); // Write the symbol to the write_to array
             this->hash_tree_depth[depth_to_search+1].set_symbol(operation, write_to_index, symbol_to_write);
             write_to_index++; // Increment the write_to index
@@ -165,7 +170,8 @@ void HashFunctionTree::evaluate(const Operation operation, const operation_index
                 "(" + this->hash_tree_depth[depth_to_search].symbol[lhs].get_symbol() + " " + get_operation_char(operation) + " " + std::to_string(rhs) + ")",
                 symbol_value,
                 this->word_count,
-                unique.count() == this->word_count
+                unique.count() == this->word_count,
+                this->hash_tree_depth[depth_to_search].symbol[lhs].get_opcount() + setting::operation_opcount_cost + setting::constant_read_opcount_cost
             ); // Write the symbol to the write_to array
             this->hash_tree_depth[depth_to_search+1].set_symbol(operation, write_to_index, symbol_to_write);
             write_to_index++; // Increment the write_to index
@@ -178,20 +184,32 @@ hash_index_t HashFunctionTree::get_opchunk_size(const operation_index_t layer_in
     return this->hash_tree_depth[layer_index].opchunk_size;
 }
 
-void HashFunctionTree::export_solutions(std::vector<std::vector<Symbol>> &solutions) const
+Symbol HashFunctionTree::get_fastest() const
 {
-    for (operation_index_t i = 0; i < total_depth; i++)
+    hash_index_t min_opcount_index = 0;
+    operation_index_t min_opcount_depth = 0;
+    bool found = false;
+    operation_index_t min_opcount = 0;
+    for (operation_index_t i = 0; i <= this->total_depth; i++)
     {
-        if (solutions.size() == i)
+        for (hash_index_t j = 0; j < this->hash_tree_depth[i].size; j++)
         {
-            solutions.push_back(std::vector<Symbol>());
-        }
-        for (hash_index_t j = 0; j < hash_tree_depth[i].size; j++)
-        {
-            if (hash_tree_depth[i].symbol[j].is_valid_solution())
+            if (this->hash_tree_depth[i].symbol[j].is_valid_solution())
             {
-                solutions[i].push_back(hash_tree_depth[i].symbol[j]);
+                //std::cout << "Valid Solution: " << this->hash_tree_depth[i].symbol[j].to_string() << std::endl;
+                if (min_opcount <= i)
+                {
+                    return this->hash_tree_depth[i].symbol[j];
+                }
+                if (this->hash_tree_depth[i].symbol[j].get_opcount() < min_opcount || !found)
+                {
+                    min_opcount_depth = i;
+                    min_opcount_index = j;
+                    min_opcount = this->hash_tree_depth[i].symbol[j].get_opcount();
+                    found = true;
+                }
             }
         }
     }
+    return this->hash_tree_depth[min_opcount_depth].symbol[min_opcount_index];
 }
