@@ -2,8 +2,9 @@
 #include "daemon.hpp"
 
 #include <iostream>
+#include <thread>
 
-void eval_operation(HashFunctionTree& tree, const uint8_t operation_id)
+void eval_operation(HashFunctionTree& tree, const operation_index_t depth, const uint8_t operation_id)
 {
     
 }
@@ -20,16 +21,20 @@ int main(int argc, char** argv)
 
     HashFunctionTree tree(args.args, args.count, args.depth);
 
-    for (uint8_t operation_id = 0; operation_id < OPERATION_COUNT; operation_id++) {
-        //eval_operation(tree, operation_id);
-        for (operation_index_t i = 1; i <= tree.get_total_depth(); i++)
+    for (operation_index_t depth = 1; depth <= tree.get_total_depth(); depth++) {
+        std::vector<std::thread> threads(OPERATION_COUNT);
+        for (uint8_t operation_id = 0; operation_id < OPERATION_COUNT; operation_id++)
         {
             Operation operation = OPERATIONS[operation_id]; // Get the operation
-            operation_index_t depth_to_search = i-1; // The depth to search is the previous layer
+            operation_index_t depth_to_search = depth-1; // The depth to search is the previous layer
             
-            tree.evaluate(operation, depth_to_search); // Evaluate the operation
+            //tree.evaluate(operation, depth_to_search); // Evaluate the operation
+            threads[operation_id] = std::thread(eval_operation, std::ref(tree), depth_to_search, operation_id);
         }
-        std::cout << "Tree created\n"; // Debugging
+        for (std::thread& thread : threads)
+        {
+            thread.join();
+        }
     }
 
     Symbol fastest = tree.get_fastest();
