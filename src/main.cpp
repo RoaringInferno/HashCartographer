@@ -3,10 +3,11 @@
 
 #include <iostream>
 #include <thread>
+#include <chrono>
 
-void eval_operation(HashFunctionTree& tree, const operation_index_t depth, const uint8_t operation_id)
+void eval_operation(HashFunctionTree& tree, const operation_index_t depth_to_search, const Operation operation)
 {
-    
+    tree.evaluate(operation, depth_to_search);
 }
 
 int main(int argc, char** argv)
@@ -21,6 +22,7 @@ int main(int argc, char** argv)
 
     HashFunctionTree tree(args.args, args.count, args.depth);
 
+    auto start = std::chrono::high_resolution_clock::now();
     for (operation_index_t depth = 1; depth <= tree.get_total_depth(); depth++) {
         std::vector<std::thread> threads(OPERATION_COUNT);
         for (uint8_t operation_id = 0; operation_id < OPERATION_COUNT; operation_id++)
@@ -28,17 +30,19 @@ int main(int argc, char** argv)
             Operation operation = OPERATIONS[operation_id]; // Get the operation
             operation_index_t depth_to_search = depth-1; // The depth to search is the previous layer
             
-            //tree.evaluate(operation, depth_to_search); // Evaluate the operation
-            threads[operation_id] = std::thread(eval_operation, std::ref(tree), depth_to_search, operation_id);
+            threads[operation_id] = std::thread(eval_operation, std::ref(tree), depth_to_search, operation);
         }
         for (std::thread& thread : threads)
         {
             thread.join();
         }
     }
+    auto end = std::chrono::high_resolution_clock::now();
 
     Symbol fastest = tree.get_fastest();
     std::cout << "Fastest: " << fastest.to_string() << "\n";
     Symbol tightest = tree.get_tightest();
     std::cout << "Tightest: " << tightest.to_string() << "\n";
+
+    //std::cout << "Time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms\n";
 }
