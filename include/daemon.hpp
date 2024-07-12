@@ -37,4 +37,5 @@ public:
     hash_index_t get_opchunk_size(const operation_index_t layer_index) const;
 
     Symbol get_fastest() const;
+    Symbol get_tightest() const;
 };

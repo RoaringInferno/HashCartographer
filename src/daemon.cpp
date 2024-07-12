@@ -103,18 +103,36 @@ HashFunctionTree::HashFunctionTree(const std::string *words, const word_index_t 
     for (character_index_t characher_index = 0; characher_index < character_count; characher_index++) // For each character
     {
         std::vector<hash_value_t> symbol_value(word_count); // Allocate memory for the character hash
+        hash_value_t min, max; // The minimum and maximum values, for tightness calculation
         std::bitset<256> unique; // The unique characters
         for (word_index_t j = 0; j < word_count; j++) // For each word
         {
             symbol_value[j] = words[j][character_hash_table[characher_index]]; // Set the character hash
             unique.set(symbol_value[j]); // Set the unique character
+            if (j == 0) // If this is the first word
+            {
+                min = symbol_value[j]; // Set the minimum value
+                max = symbol_value[j]; // Set the maximum value
+            }
+            else // If this is not the first word
+            {
+                if (symbol_value[j] < min) // If the value is less than the minimum
+                {
+                    min = symbol_value[j]; // Set the minimum value
+                }
+                if (symbol_value[j] > max) // If the value is greater than the maximum
+                {
+                    max = symbol_value[j]; // Set the maximum value
+                }
+            }
         }
         hash_tree_depth[0].symbol[characher_index] = Symbol(
-            "[" + std::to_string(character_hash_table[characher_index]) + "]",
-            symbol_value,
-            word_count,
-            unique.count() == word_count,
-            setting::character_read_opcount_cost
+            "[" + std::to_string(character_hash_table[characher_index]) + "]", // symbol
+            symbol_value, // value
+            word_count, // word_count
+            unique.count() == word_count, // valid_solution
+            setting::character_read_opcount_cost, // opcount
+            max - min // tightness
         );
     }
 }
@@ -133,23 +151,41 @@ void HashFunctionTree::evaluate(const Operation operation, const operation_index
             // Generate a Symbol
             std::vector<hash_value_t> symbol_value = std::vector<hash_value_t>(this->word_count); // Allocate memory for the symbol value array
             std::bitset<256> unique; // The unique characters
+            hash_value_t min, max; // The minimum and maximum values, for tightness calculation
             for (word_index_t i = 0; i < this->word_count; i++) // For each word
             {
                 symbol_value[i] = execute(
                     operation,
-                    this->hash_tree_depth[depth_to_search].symbol[lhs].get_value(i),
-                    this->hash_tree_depth[depth_to_search].symbol[rhs].get_value(i)
+                    this->hash_tree_depth[depth_to_search].symbol[lhs].get_value(i), // lhs
+                    this->hash_tree_depth[depth_to_search].symbol[rhs].get_value(i) // rhs
                 ); // Set the symbol value
                 unique.set(symbol_value[i]); // Set the unique character
+                if (i == 0) // If this is the first word
+                {
+                    min = symbol_value[i]; // Set the minimum value
+                    max = symbol_value[i]; // Set the maximum value
+                }
+                else // If this is not the first word
+                {
+                    if (symbol_value[i] < min) // If the value is less than the minimum
+                    {
+                        min = symbol_value[i]; // Set the minimum value
+                    }
+                    if (symbol_value[i] > max) // If the value is greater than the maximum
+                    {
+                        max = symbol_value[i]; // Set the maximum value
+                    }
+                }
             }
             Symbol symbol_to_write = Symbol(
-                "(" + this->hash_tree_depth[depth_to_search].symbol[lhs].get_symbol() + " " + get_operation_char(operation) + " " + this->hash_tree_depth[depth_to_search].symbol[rhs].get_symbol() + ")",
-                symbol_value,
-                this->word_count,
-                unique.count() == this->word_count,
-                this->hash_tree_depth[depth_to_search].symbol[lhs].get_opcount() + this->hash_tree_depth[depth_to_search].symbol[rhs].get_opcount() + setting::operation_opcount_cost
-            ); // Write the symbol to the write_to array
-            this->hash_tree_depth[depth_to_search+1].set_symbol(operation, write_to_index, symbol_to_write);
+                "(" + this->hash_tree_depth[depth_to_search].symbol[lhs].get_symbol() + " " + get_operation_char(operation) + " " + this->hash_tree_depth[depth_to_search].symbol[rhs].get_symbol() + ")", // symbol
+                symbol_value, // value
+                this->word_count, // word_count
+                unique.count() == this->word_count, // valid_solution
+                this->hash_tree_depth[depth_to_search].symbol[lhs].get_opcount() + this->hash_tree_depth[depth_to_search].symbol[rhs].get_opcount() + setting::operation_opcount_cost, // opcount
+                max-min // tightness
+            );
+            this->hash_tree_depth[depth_to_search+1].set_symbol(operation, write_to_index, symbol_to_write); // Set the symbol
             write_to_index++; // Increment the write_to index
         }
         for (uint16_t rhs = 0; rhs < 256; rhs++) // For each character
@@ -157,23 +193,42 @@ void HashFunctionTree::evaluate(const Operation operation, const operation_index
             // Generate a Symbol
             std::vector<hash_value_t> symbol_value = std::vector<hash_value_t>(this->word_count); // Allocate memory for the symbol value array
             std::bitset<256> unique; // The unique characters
+            hash_value_t min, max; // The minimum and maximum values, for tightness calculation
             for (word_index_t i = 0; i < this->word_count; i++) // For each word
             {
                 symbol_value[i] = execute(
                     operation,
-                    this->hash_tree_depth[depth_to_search].symbol[lhs].get_value(i),
+                    this->hash_tree_depth[depth_to_search].symbol[lhs].get_value(i), // lhs
                     rhs
                 ); // Set the symbol value
                 unique.set(symbol_value[i]); // Set the unique character
+
+                if (i == 0) // If this is the first word
+                {
+                    min = symbol_value[i]; // Set the minimum value
+                    max = symbol_value[i]; // Set the maximum value
+                }
+                else // If this is not the first word
+                {
+                    if (symbol_value[i] < min) // If the value is less than the minimum
+                    {
+                        min = symbol_value[i]; // Set the minimum value
+                    }
+                    if (symbol_value[i] > max) // If the value is greater than the maximum
+                    {
+                        max = symbol_value[i]; // Set the maximum value
+                    }
+                }
             }
             Symbol symbol_to_write = Symbol(
-                "(" + this->hash_tree_depth[depth_to_search].symbol[lhs].get_symbol() + " " + get_operation_char(operation) + " " + std::to_string(rhs) + ")",
-                symbol_value,
-                this->word_count,
-                unique.count() == this->word_count,
-                this->hash_tree_depth[depth_to_search].symbol[lhs].get_opcount() + setting::operation_opcount_cost + setting::constant_read_opcount_cost
-            ); // Write the symbol to the write_to array
-            this->hash_tree_depth[depth_to_search+1].set_symbol(operation, write_to_index, symbol_to_write);
+                "(" + this->hash_tree_depth[depth_to_search].symbol[lhs].get_symbol() + " " + get_operation_char(operation) + " " + std::to_string(rhs) + ")", // symbol
+                symbol_value, // value
+                this->word_count, // word_count
+                unique.count() == this->word_count, // valid_solution
+                this->hash_tree_depth[depth_to_search].symbol[lhs].get_opcount() + setting::operation_opcount_cost + setting::constant_read_opcount_cost, // opcount
+                max-min // tightness
+            );
+            this->hash_tree_depth[depth_to_search+1].set_symbol(operation, write_to_index, symbol_to_write); // Set the symbol
             write_to_index++; // Increment the write_to index
         }
     }
@@ -196,20 +251,50 @@ Symbol HashFunctionTree::get_fastest() const
         {
             if (this->hash_tree_depth[i].symbol[j].is_valid_solution())
             {
-                //std::cout << "Valid Solution: " << this->hash_tree_depth[i].symbol[j].to_string() << std::endl;
-                if (min_opcount <= i)
+                operation_index_t opcount = this->hash_tree_depth[i].symbol[j].get_opcount(); // Cache the opcount
+                if (opcount <= i) // Perfect solution
                 {
                     return this->hash_tree_depth[i].symbol[j];
                 }
-                if (this->hash_tree_depth[i].symbol[j].get_opcount() < min_opcount || !found)
+                if (opcount < min_opcount || !found) // If the opcount is less than the minimum opcount
                 {
                     min_opcount_depth = i;
                     min_opcount_index = j;
-                    min_opcount = this->hash_tree_depth[i].symbol[j].get_opcount();
+                    min_opcount = opcount;
                     found = true;
                 }
             }
         }
     }
     return this->hash_tree_depth[min_opcount_depth].symbol[min_opcount_index];
+}
+
+Symbol HashFunctionTree::get_tightest() const
+{
+    hash_index_t min_tightness_index = 0;
+    operation_index_t min_tightness_depth = 0;
+    bool found = false;
+    hash_value_t min_tightness = 0;
+    for (operation_index_t i = 0; i <= this->total_depth; i++)
+    {
+        for (hash_index_t j = 0; j < this->hash_tree_depth[i].size; j++)
+        {
+            if (this->hash_tree_depth[i].symbol[j].is_valid_solution())
+            {
+                hash_value_t tightness = this->hash_tree_depth[i].symbol[j].get_tightness(); // Cache the tightness
+                if (tightness == word_count-1) // Perfect solution
+                {
+                    return this->hash_tree_depth[i].symbol[j];
+                }
+                if (tightness < min_tightness || !found) // If the tightness is less than the minimum tightness
+                {
+                    min_tightness_depth = i;
+                    min_tightness_index = j;
+                    min_tightness = tightness;
+                    found = true;
+                }
+            }
+        }
+    }
+    return this->hash_tree_depth[min_tightness_depth].symbol[min_tightness_index];
 }

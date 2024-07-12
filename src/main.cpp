@@ -25,4 +25,6 @@ int main(int argc, char** argv) {
 
     Symbol fastest = tree.get_fastest();
     std::cout << "Fastest: " << fastest.to_string() << "\n";
+    Symbol tightest = tree.get_tightest();
+    std::cout << "Tightest: " << tightest.to_string() << "\n";
 }

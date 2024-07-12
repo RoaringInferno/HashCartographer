@@ -49,11 +49,12 @@ hash_value_t calc_tightness(const std::vector<hash_value_t> value, const word_in
     return max - min;
 }
 
-Symbol::Symbol(const std::string symbol, std::vector<hash_value_t> value, const word_index_t word_count, const bool valid_solution, const operation_index_t opcount) :
+Symbol::Symbol(const std::string symbol, std::vector<hash_value_t> value, const word_index_t word_count, const bool valid_solution, const operation_index_t opcount, const operation_index_t tightness) :
     symbol(symbol),
     value(value),
     valid_solution(valid_solution),
-    opcount(opcount)
+    opcount(opcount),
+    tightness(tightness)
 {
     /*
     if (valid_solution)
@@ -72,9 +73,16 @@ hash_value_t Symbol::get_value(const character_index_t index) const { return thi
 
 operation_index_t Symbol::get_opcount() const { return this->opcount; }
 
+operation_index_t Symbol::get_tightness() const { return this->tightness; }
+
 std::string Symbol::to_string() const
 {
-    std::string str = this->symbol + " with opcount " + std::to_string(this->opcount) + " has hash table:";
+    std::string str =
+        this->symbol +
+        " with opcount " + std::to_string(this->opcount) +
+        " and tightness " + std::to_string(this->tightness) +
+        " has hash table:"
+    ;
     for (hash_value_t val : this->value)
     {
         str += " " + std::to_string(val);
