@@ -10,6 +10,16 @@ void eval_operation(HashFunctionTree& tree, const operation_index_t depth_to_sea
     tree.evaluate(operation, depth_to_search);
 }
 
+void pull_fastest(const HashFunctionTree& tree, Symbol& fastest)
+{
+    fastest = tree.get_fastest();
+}
+
+void pull_tightest(const HashFunctionTree& tree, Symbol& tightest)
+{
+    tightest = tree.get_tightest();
+}
+
 int main(int argc, char** argv)
 {
     Args args;
@@ -39,9 +49,10 @@ int main(int argc, char** argv)
     }
     auto end = std::chrono::high_resolution_clock::now();
 
-    Symbol fastest = tree.get_fastest();
+    Symbol fastest, tightest;
+    pull_fastest(tree, fastest);
+    pull_tightest(tree, tightest);
     std::cout << "Fastest: " << fastest.to_string() << "\n";
-    Symbol tightest = tree.get_tightest();
     std::cout << "Tightest: " << tightest.to_string() << "\n";
 
     //std::cout << "Time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms\n";
