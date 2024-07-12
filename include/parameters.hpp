@@ -9,5 +9,5 @@ typedef uint8_t hash_value_t; // Defines the value of each hash
 
 namespace setting
 {
-    static const operation_index_t default_operation_search_depth = 3;
+    static const operation_index_t default_operation_search_depth = 1;
 };
