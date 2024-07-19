@@ -1,4 +1,4 @@
-# hash-cartography
+# HashCartographer
 A program to brute force hash functions for closed sets of strings to a specified operation depth, using bitwise operators.
 ## Usage
 Arguments will be treated as strings for the program to parse.
