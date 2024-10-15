@@ -3,6 +3,7 @@
 #include "parameters.hpp"
 
 #include <string>
+#include <vector>
 
 class Symbol
 {
